@@ -4,14 +4,12 @@
 import re
 import os
 import sys
-import time
 import json
 import random
 import requests
 import platform
 import termcolor
 import http.cookiejar
-from http.cookiejar import FileCookieJar
 
 
 requests = requests.session()
@@ -230,7 +228,7 @@ def login(account=None, password=None):
         Logging.success(u"登录成功!")
         requests.cookies.save()
         return True
+
+
 if __name__ == "__main__":
-    # login(account="xxx@email.com", password="xxxx")
-    #login("1181395975@qq.com", "Byjin@09290814")
     login()
