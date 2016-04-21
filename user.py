@@ -1,6 +1,8 @@
 #!/user/bin/env python3
 # -*- coding: utf-8 -*-
 
+# 代码参考了https://github.com/egrcc/zhihu-python库
+
 import re
 import os
 import sys
@@ -178,7 +180,7 @@ def islogin():
         Logging.warm(u"网络故障")
         return None
 
-def read_account_from_config_file(config_file="config.ini"):
+def get_account(config_file="config.ini"):
     try:
         import configparser
     except:
@@ -204,7 +206,7 @@ def login(account=None, password=None):
         return True
 
     if account == None:
-        (account, password) = read_account_from_config_file()
+        (account, password) = get_account()
     if account == None:
         sys.stdout.write(u"请输入登录账户: ")
         account = input()
