@@ -1,69 +1,126 @@
 #!/user/bin/env python3
 # _*_ coding: utf-8 _*_
 
-
 import re
 import requests
 import http.cookiejar
-from user import Logging, islogin
+from user import islogin
 from bs4 import BeautifulSoup
 
 req = requests.Session()
 req.cookies = http.cookiejar.LWPCookieJar('cookies')
 try:
-    req.cookies.load(ignore_discard=False)
+    req.cookies.load(ignore_discard=True)
 except:
-    Logging.error(u'你尚未登录！')
-    Logging.info(u'')
+    print(u'你尚未登录！')
     raise Exception(u'无权限（403）')
-
 try:
     if islogin() == True:
         pass
 except:
-    Logging.error(u'身份已失效！')
-    Logging.info(u'请运行user.py重新登录')
+    print(u'身份已失效！')
+    print(u'请运行user.py重新登录')
     raise Exception(u'无权限（403）')
 
-url = "https://www.zhihu.com/question/42180532"
-r = requests.get(url)
-soup = BeautifulSoup(r.content, 'lxml')
-title = soup.title.get_text()
-# print('title: ', title)
+class Question:
+    soup = None
+    def __init__(self, url, title=None): # 加URL检错
+        if not re.compile(r'https://www.zhihu.com/question/\d{8}').match(url):
+            raise ValueError("\"" + url + "\"" + ": 不是一个符合规定的url")
+        else:
+            self.url = url
+        if title != None:
+            self.title = title
 
-# 相关话题
-item_tag = soup.find_all('a', class_="zm-item-tag")
-item = []
-for i in item_tag:
-    item.append(i.get_text(" ", strip=True))
-# print(item)
+    # 抓取网页
+    def get_html(self):
+        # r = requests.session()
+        r = requests.get(self.url, cookies=req.cookies)
+        self.soup = BeautifulSoup(r.content, 'lxml')
 
-# 问题描述
-question_detail = soup.find('div', id='zh-question-detail').get_text()
+    # 获取标题
+    def get_title(self):
+        # 先判断实例中有无'title'属性
+        if hasattr(self, 'title'):
+            title = self.title
+            return title
+        else:
+            if self.soup == None:
+                self.get_html()
+            soup = self.soup
+            title = soup.find('h2', class_="zm-item-title zm-editable-content").get_text()
+        return title
 
-# 评论人数
-comment = soup.find('a', class_="toggle-comment meta-item").get_text()
-# print('comment:', comment)
+    # 相关话题
+    def get_item_tag(self):
+        if self.soup == None:
+            self.get_html()
+        soup = self.soup
+        item = []
+        item_tag = soup.find_all('a', class_="zm-item-tag")
+        for i in item_tag:
+            item.append(i.get_text("", strip=True))
+        return item
 
-# 抓取关注人数
-question_followers = soup.find('div', class_="zg-gray-normal").a
-print('question_followers: ', question_followers)     # None
+    # 话题描述
+    def get_detail(self):
+        if self.soup == None:
+            self.get_html()
+        soup = self.soup
+        detail = soup.find('div', id="zh-question-detail").get_text()
+        return detail
 
-# 回答人数
-answers_num = soup.find('div', class_="zh-answers-title clearfix").h3.get_text()
-print('answers_num:', answers_num)
+    # 获取评论人数
+    def get_comment(self):
+        if self.soup == None:
+            self.get_html()
+        soup = self.soup
+        if soup.find('a', class_="toggle-comment meta-item") != None:
+            comment_num = soup.find('a', class_="toggle-comment meta-item").get_text()
+        return comment_num
 
-# 赞同数
-vote_count = soup.find('button', class_="up").span.get_text()
-print('up_count: ', vote_count)
+    # 答案总数
+    def get_answer_num(self):
+        if self.soup == None:
+            self.get_html()
+        soup = self.soup
+        if soup.find('h3', id="zh-question-answer-num") != None:
+            answer_num = soup.find('h3', id="zh-question-answer-num")['data-num']
+        return int(answer_num)
 
-# 回答者
-author = soup.find('a', class_="author-link").get_text()
-print('author: ', author)
+    # 获取关注人数
+    def get_follower(self):
+        if self.soup == None:
+            self.get_html()
+        soup = self.soup
+        follower_num = soup.find('div', class_="zg-gray-normal").get_text()  # .strong.get_text()
+        return follower_num
 
-# 答案发布时间
-answer_data = soup.find('a', class_="answer-date-link meta-item").get_text()
-print(answer_data)
-# 答案
-answer = soup.find('div', class_="zm-editable-content clearfix").get_text()
-# print(answer)
+    # 回答
+    def get_answers(self):
+        answers_num = self.get_answer_num()
+        if answers_num == 0:
+            print(u'尚未有人回答该问题！')
+            yield
+
+        else:
+            if self.soup == None:
+                self.get_html()
+            soup = self.soup
+
+            answer = soup.find('div', class_="zm-editable-content clearfix").get_text()
+            print('-----====***====--------')
+            # for i in answer:
+            print('answer_1: ', answer)
+
+        return answer
+
+    def get_top_i_answer(self, n):
+        i = 0
+        answers = self.get_answers()
+        for answer in answers:
+            i = i + 1
+            if i > n:
+                break
+            yield answer
+            print('answers: ', answer)
