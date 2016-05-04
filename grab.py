@@ -31,14 +31,14 @@ except:
 class Question:
     soup = None
     url = None
+
     def __init__(self, url, title=None):
-        if not re.compile(r'https://www.zhihu.com/question/\d{8}').match(url):
-            raise ValueError("\"" + url + "\"" + ": 不是一个符合规定的url")
+        if not re.compile(r'(http|https)://w{3}\.zhihu\.com/question/\d{8}').match(url):
+            raise ValueError("\"" + url + "\"" + ": it isn't a question url")
         else:
             self.url = url
         if title != None:
             self.title = title
-
 
     def get_html(self):
         r = session.get(self.url)    # cookies=session.cookies
@@ -120,60 +120,38 @@ class Question:
                 content = s[j].find('div', class_='zm-editable-content clearfix').get_text()
                 yield (auth, vote_count, content)
 
-    def to_txt(self):
-        file_name = self.get_title().replace('\n', '')
-        items = self.get_all_answers()
-        if os.path.exists(os.path.join(os.getcwd(), file_name)):
-            with open(os.path.join(os.getcwd(), file_name), 'w') as f:
-                f.write('\n')
-        else:
-            os.mkdir(os.path.join(file_name))
-            for auth, vote, content in items:
-                with open(os.path.join(os.getcwd(), file_name + '\\' + auth + '的回答' + '----' + \
-                        '获赞数：' + str(vote) + '.txt'), 'w') as f:
-                    f.write(content)
-                    print('Author: {0} Vote: {1} Content: {2}'.format(auth, vote, content))
-                    print('-@#-'*10)
-        print('--**--已经存为txt!!')
+
 
 
 class User:
-    # user_url = None
+    HOME_URL = 'http://www.zhihu.com'
     soup = None
 
-    def __init__(self, user_url, user_name=None):
+    def __init__(self, user_url):
         if not re.compile(r"^(http|https)://w{3}\.zhihu\.com/people/\S+$").match(user_url):
             raise ValueError('\"' + user_url + '\"' + "it isn't a user url.")
         else:
             self.user_url = user_url
-            if user_name != None:
-                self.user_name = user_name
 
     def get_html(self):
         r = session.get(self.user_url)
         self.soup = BeautifulSoup(r.content, 'lxml')
 
     def get_user_name(self):
-        # if self.user_url == None:
-            # print('url: ', user)
-        #     return '12匿名用户'
-        # else:
-        if hasattr(self, 'user_name'):
-            return self.user_name
-        else:
-            if self.soup == None:
-                self.get_html()
-            user_name = self.soup.find('span', class_='name').span
-            if user_name != None:
-                self.user_name = user_name.string
-                return user_name
+        if self.soup == None:
+            self.get_html()
+        user_name = self.soup.find('span', class_='name')
+        # print('@@User Name: ', user_name)
+        if user_name != None:
+            user_name = user_name.string
+            return user_name
 
     def user_description(self):
         if self.soup == None:
             self.get_html()
         s = self.soup.find('span', class_='content')
         if s != None:
-            self_description = s.string
+            self_description = s.get_text()
             return self_description
         else:
             return None
@@ -184,10 +162,164 @@ class User:
         else:
             if self.soup == None:
                 self.get_html()
-            num = self.soup.find('span', class_='zm-profile-header-user-agree').strong
-            print('num: ', num)
-            if num != None:
-                get_agree_num = num.string
+            agree_num = self.soup.find('span', class_='zm-profile-header-user-agree').strong
+
+            if agree_num != None:
+                get_agree_num = agree_num.string
                 return get_agree_num
             else:
                 return 0
+
+    def get_thanks(self):
+        if self.user_url == None:
+            return 0
+        else:
+            if self.soup == None:
+                self.get_html()
+            thanks_num = self.soup.find('span', class_='zm-profile-header-user-thanks').strong
+            if thanks_num != None:
+                get_thanks_num = thanks_num.string
+                return get_thanks_num
+            else:
+                return 0
+
+    def get_asks(self):
+        if self.user_url == None:
+            return 0
+        else:
+            if self.soup == None:
+                self.get_html()
+            ask_item = self.soup.find_all('a', class_='item')[1]
+            num = ask_item.span
+            if (num and ask_item) != None:
+                asks_num = num.string
+                ask_item_url = self.HOME_URL + ask_item['href']
+                return (asks_num, ask_item_url)
+
+    def get_user_answer(self):
+        if self.user_url == None:
+            return 0
+        else:
+            if self.soup == None:
+                self.get_html()
+            num = self.soup.find_all('a', class_='item')[2]
+            if num != None:
+                answer_num = num.span.string
+                answer_url = self.HOME_URL + num['href']
+                return (answer_num, answer_url)
+
+    def get_followees(self):
+        if self.user_url == None:
+            print('--followee_num--')
+            return 0
+        else:
+            if self.soup == None:
+                self.get_html()
+            followee = self.soup.find('div', class_='zm-profile-side-following zg-clear')\
+                    .find('a', class_='item').strong
+            if followee != None:
+                followee_num = followee.string
+                return followee_num
+            else:
+                return 0
+
+    def get_followers(self):
+        if self.user_url == None:
+            print('++followers_num++')
+            return 0
+        else:
+            if self.soup == None:
+                self.get_html()
+            follower = self.soup.find('div', class_='zm-profile-side-following zg-clear')\
+                    .find_all('a', class_='item')[1].strong
+            if follower != None:
+                follower_num = follower.string
+                return follower_num
+            else:
+                return 0
+
+
+class Answer:
+    soup = None
+    url = None
+    HOME_URL = 'http://www.zhihu.com'
+
+    def __init__(self, url):
+        if not re.compile(r"^(http|https)://w{3}\.zhihu\.com/question/\d{8}$").match(url):
+            raise ValueError('\"' + url + '\"' + "it isn't a question url.")
+
+        self.url = url
+
+    def get_html(self):
+        r = session.get(self.url)
+        self.soup = BeautifulSoup(r.content, 'lxml')
+
+    # def get_question(self):
+    #    if hasattr(self, 'question'):
+    #        return self.question
+    #    else:
+    #        if self.soup == None:
+    #            self.get_html()
+    #       question_url = self.find('h2', class_='zm-item-title zm-editable-content')
+
+    def get_all_content(self):
+        if self.soup == None:
+            self.get_html()
+        soup = self.soup
+        # print('soup: ', soup)
+        # soup = BeautifulSoup(soup, 'lxml')
+        answers = soup.find('div', id='zh-question-answer-wrap')
+        soup.body.extract()
+        soup.head.insert_after(soup.new_tag('body', {'class': 'zhi'}))
+        soup.body.append(answers)
+        print('--=0ew-r9w0er')
+        return soup
+
+    def to_txt(self):
+        content = self.get_all_content()
+        body = content.find('body')
+        print('-------content------')
+
+        br_list = body.find_all('br')
+        for br in br_list:
+            br.insert_after(content.new_string('\n'))
+
+        li_list = body.find_all('li')
+        for li in li_list:
+            li.insert_before(content.new_string('\n'))
+
+        question = Question(self.url)
+
+        file_name = question.get_title().replace('\n', '')
+
+        # items = content.find_all('div', )
+        items = content.find_all('div', class_='zm-item-answer')
+        if items != None:
+            for j in range(len(items)):
+                vote_count = items[j].find('span', class_='count').get_text()
+
+                # 非匿名
+                if items[j].find('a', class_='author-link') is not None:
+                    auth = items[j].find('a', class_='author-link').get_text()
+                    auth_url = items[j].find('a', class_='author-link')['href']
+                else:
+                    auth = items[j].find('span', class_='name').get_text()
+                content = items[j].find('div', class_='zm-editable-content clearfix').get_text()
+                yield (auth, vote_count, auth_url, content)
+
+            print('=^^&'*10)
+
+
+        if os.path.exists(os.path.join(os.getcwd(), file_name)):
+            with open(os.path.join(os.getcwd(), file_name), 'w') as f:
+                f.write('\n')
+        else:
+            os.mkdir(os.path.join(file_name))
+            for auth, vote, auth_url, content in items:
+                with open(os.path.join(os.getcwd(), file_name + '\\' + file_name + '---' + auth + \
+                        '的回答' + '.txt'), 'w') as f:
+                    f.write(str('作者链接: ') + self.HOME_URL + auth_url)
+                    f.write(content)
+                    # print('Author: {0} Vote: {1} Content: {2}'.format(auth, vote, content))
+                    # print('-@#-'*10)
+        print('--**--已经存为txt!!')
