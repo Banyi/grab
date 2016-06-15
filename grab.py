@@ -7,25 +7,8 @@ import requests
 from bs4 import BeautifulSoup
 
 
-session = requests.Session()
+#session = requests.Session()
 
-'''
-session.cookies = http.cookiejar.LWPCookieJar('cookies')
-# print('cookies: ', req.cookies)
-
-try:
-    session.cookies.load(ignore_discard=True)
-except:
-    print(u'你尚未登录！')
-    raise Exception(u'无权限（403）')
-try:
-    if islogin() == True:
-        pass
-except:
-    print(u'身份已失效！')
-    print(u'请运行user.py重新登录')
-    raise Exception(u'无权限（403）')
-'''
 
 
 class Question:
