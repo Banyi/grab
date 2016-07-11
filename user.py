@@ -1,6 +1,7 @@
 #!/user/bin/env python3
 # -*- coding: utf-8 -*-
 
+
 import re
 import os
 import sys
@@ -35,7 +36,7 @@ def get_captcha():
     if platform.system() == "Windows":
         os.system("%s &" % image_name)
     else:
-        print(u"无法探测你的作业系统，请自行打开验证码 % 文件，并输入验证码。" % os.path.join(os.getcwd(), image_name))
+        print(u"无法探测作业系统，请自行打开验证码 % 文件，并输入验证码。" % os.path.join(os.getcwd(), image_name))
 
     sys.stdout.write(termcolor.colored(u"请输入验证码：", "cyan"))
     captcha_code = input()
