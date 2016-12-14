@@ -3,7 +3,7 @@
 
 from grab import Question
 
-url = "https://www.zhihu.com/question/42180532"
+url = "https://www.zhihu.com/question/xxxx"
 
 A = Question(url)
 '''
